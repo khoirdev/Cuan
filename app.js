@@ -197,3 +197,17 @@ toggleInApp.addEventListener('change', () => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 renderBalance()
+
+// Auto-start In-App Interstitial saat app dibuka
+show_11133202({
+  type: 'inApp',
+  inAppSettings: {
+    frequency:  2,
+    capping:    0.1,   // 6 menit
+    interval:   30,    // 30 detik antar iklan
+    timeout:    5,     // mulai setelah 5 detik
+    everyPage:  false,
+  },
+})
+inAppActive = true
+toggleInApp.checked = true
