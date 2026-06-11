@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Earn Coins</title>
+
+  <!-- Telegram Mini App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --tg-bg:       var(--tg-theme-bg-color, #17212b);
+      --tg-surface:  var(--tg-theme-secondary-bg-color, #232e3c);
+      --tg-text:     var(--tg-theme-text-color, #f5f5f5);
+      --tg-hint:     var(--tg-theme-hint-color, #708499);
+      --tg-accent:   var(--tg-theme-button-color, #2ea6ff);
+      --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
+      --coin:        #f5c518;
+      --radius:      16px;
+      --radius-sm:   10px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      font-family: -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 0 0 32px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 12px;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--tg-surface);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--tg-hint);
+    }
+    .streak-badge span { color: var(--coin); }
+
+    /* ── Balance card ── */
+    .balance-card {
+      margin: 0 16px 24px;
+      background: var(--tg-surface);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .balance-card::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,24,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .coin-icon {
+      font-size: 40px;
+      line-height: 1;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 2px 8px rgba(245,197,24,0.4));
+    }
+    .balance-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--tg-hint);
+      margin-bottom: 4px;
+    }
+    .balance-amount {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--coin);
+      letter-spacing: -2px;
+      line-height: 1;
+      transition: transform 0.15s ease;
+    }
+    .balance-amount.bump {
+      transform: scale(1.12);
+    }
+    .balance-sub {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--tg-hint);
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--tg-hint);
+      padding: 0 20px 10px;
+    }
+
+    /* ── Ad buttons ── */
+    .ad-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 0 16px;
+      margin-bottom: 28px;
+    }
+
+    .ad-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--tg-surface);
+      border: none;
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      color: var(--tg-text);
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ad-btn:active { transform: scale(0.98); opacity: 0.85; }
+    .ad-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .ad-btn-icon {
+      width: 46px; height: 46px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .icon-interstitial { background: rgba(46,166,255,0.15); }
+    .icon-pop          { background: rgba(122,100,255,0.15); }
+
+    .ad-btn-text { flex: 1; }
+    .ad-btn-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .ad-btn-desc {
+      font-size: 13px;
+      color: var(--tg-hint);
+    }
+
+    .ad-btn-reward {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--coin);
+      flex-shrink: 0;
+    }
+
+    /* ── In-App status card ── */
+    .inapp-card {
+      margin: 0 16px;
+      background: var(--tg-surface);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .inapp-info { flex: 1; }
+    .inapp-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .inapp-desc {
+      font-size: 12px;
+      color: var(--tg-hint);
+    }
+    .toggle {
+      position: relative;
+      width: 48px; height: 28px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      background: var(--tg-hint);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--tg-accent); }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #2ea6ff;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+      z-index: 999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Loading spinner overlay ── */
+    .ad-loading {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      color: #fff;
+      font-size: 14px;
+    }
+    .ad-loading.visible { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <div class="header">
+    <div class="header-title">Earn Coins</div>
+    <div class="streak-badge">🔥 Streak <span id="streak-count">0</span></div>
+  </div>
+
+  <!-- Balance -->
+  <div class="balance-card">
+    <div class="coin-icon">🪙</div>
+    <div class="balance-label">Your balance</div>
+    <div class="balance-amount" id="balance">0</div>
+    <div class="balance-sub">Watch ads to earn more</div>
+  </div>
+
+  <!-- Manual ad formats -->
+  <div class="section-label">Earn now</div>
+  <div class="ad-list">
+
+    <button class="ad-btn" id="btn-interstitial">
+      <div class="ad-btn-icon icon-interstitial">📺</div>
+      <div class="ad-btn-text">
+        <div class="ad-btn-title">Watch a video</div>
+        <div class="ad-btn-desc">Fullscreen rewarded ad</div>
+      </div>
+      <div class="ad-btn-reward">+10 🪙</div>
+    </button>
+
+    <button class="ad-btn" id="btn-pop">
+      <div class="ad-btn-icon icon-pop">🎯</div>
+      <div class="ad-btn-text">
+        <div class="ad-btn-title">Open offer</div>
+        <div class="ad-btn-desc">Rewarded pop ad</div>
+      </div>
+      <div class="ad-btn-reward">+5 🪙</div>
+    </button>
+
+  </div>
+
+  <!-- In-App Interstitial toggle -->
+  <div class="section-label">Auto ads</div>
+  <div class="inapp-card">
+    <div class="inapp-info">
+      <div class="inapp-title">Background ads</div>
+      <div class="inapp-desc">Earn passively while you use the app</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="toggle-inapp" />
+      <div class="toggle-track"></div>
+    </label>
+  </div>
+
+</div>
+
+<!-- Loading overlay -->
+<div class="ad-loading" id="ad-loading">
+  <div class="spinner"></div>
+  <div>Loading ad…</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
